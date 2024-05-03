@@ -111,6 +111,8 @@ async fn upload_multipart(file_upload: &FileUpload, client: &Client, chunk_size:
 
     let upload_id = multipart_upload_res.upload_id().unwrap();
 
+    println!("Starting upload of file: {}, size: {} bytes.", file_path, file_size);
+
     let mut chunk_count = (file_size / chunk_size) + 1;
     let mut size_of_last_chunk = file_size % chunk_size;
     if size_of_last_chunk == 0 {
@@ -125,6 +127,8 @@ async fn upload_multipart(file_upload: &FileUpload, client: &Client, chunk_size:
     let mut upload_parts: Vec<CompletedPart> = Vec::new();
 
     for chunk_index in 0..chunk_count {
+
+        println!("Uploading chunk {} of {}", chunk_index + 1, chunk_count);
         let this_chunk = if chunk_count - 1 == chunk_index {
             size_of_last_chunk
         } else {
@@ -139,6 +143,8 @@ async fn upload_multipart(file_upload: &FileUpload, client: &Client, chunk_size:
             .build()
             .await
             .unwrap();
+        println!("Buffer size: {}", buffer_size);
+        println!("Path: {}", file_path);
 
         //Chunk index needs to start at 0, but part numbers start at 1.
         let part_number = (chunk_index as i32) + 1;
@@ -175,6 +181,10 @@ async fn upload_multipart(file_upload: &FileUpload, client: &Client, chunk_size:
         .send()
         .await
         .unwrap();
+
+    println!("Upload complete for file: {}", file_path);
+    println!("upload_id: {}", upload_id);
+    println!("bucket_name: {}", bucket_name);
 
     Ok(())
 }
