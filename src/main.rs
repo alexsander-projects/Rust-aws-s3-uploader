@@ -33,50 +33,56 @@ struct Args {
     buffer_size: usize
 }
 
+struct FileUpload {
+    file_path: String,
+    bucket_name: String,
+}
+
 
 #[tokio::main]
 async fn main() {
     let args = Args::parse();
-    let mut files = Vec::new();
-    let bucket_name = args.bucket_name;
+    let thread_count = args.threads;
+    let chunk_size = args.chunk_size;
+    let buffer_size = args.buffer_size;
+
+
+    // Collect only file paths upfront
+    let mut file_paths = Vec::new();
     for file_path in WalkDir::new(args.dir_path) {
         let file_path = file_path.unwrap();
-        if file_path.path().is_dir() {
-        } else {
-            files.push(FileUpload {
-                file_path: file_path.path().to_owned(),
-                bucket_name: bucket_name.to_owned(),
+        if file_path.path().is_file() {
+            file_paths.push(FileUpload {
+                file_path: file_path.path().to_str().unwrap().to_owned(),
+                bucket_name: args.bucket_name.to_owned()
             });
         }
     }
 
-    let thread_count = args.threads;
-    let chunk_size = args.chunk_size;
-    let buffer_size = args.buffer_size;
-    let chunk_len = (files.len() / thread_count) + 1;
-
-    let chunked_items: Vec<Vec<FileUpload>> = files
+    // Divide work into chunks
+    let chunked_items: Vec<Vec<FileUpload>> = file_paths
         .into_iter()
-        .chunks(chunk_len)
+        .chunks(thread_count) // Chunk by the number of threads
         .into_iter()
         .map(|chunk| chunk.collect())
         .collect();
 
+    // Start threads
     let mut threads = vec![];
     for file_chunk in chunked_items {
-        let timeout_config = TimeoutConfig::builder()
-            .connect_timeout(Duration::from_secs(30))
-            .build();
         let shared_config = aws_config::from_env()
-            .timeout_config(timeout_config)
             .load()
             .await;
         let client = Client::new(&shared_config);
 
         let handle = tokio::spawn(async move {
             for file in file_chunk {
-                println!("Uploading {}", &file.file_path.display());
-                upload_multipart(&file, &client, chunk_size, buffer_size).await.unwrap();
+                println!("Uploading {}", &file.file_path);
+
+                // Move file reading and upload logic inside the thread
+                upload_multipart(&file, &client, chunk_size, buffer_size)
+                    .await
+                    .unwrap();
             }
         });
         threads.push(handle);
@@ -88,15 +94,10 @@ async fn main() {
 
 }
 
-struct FileUpload {
-    file_path: PathBuf,
-    bucket_name: String,
-}
-
 async fn upload_multipart(file_upload: &FileUpload, client: &Client, chunk_size: u64, buffer_size: usize) -> anyhow::Result<()> {
-    let file_path = file_upload.file_path.to_str().unwrap();
+    let file_path = file_upload.file_path.to_owned();
     let bucket_name = &file_upload.bucket_name;
-    let file_size = tokio::fs::metadata(file_path)
+    let file_size = tokio::fs::metadata(&file_upload.file_path)
         .await
         .expect("it exists I swear")
         .len();
@@ -104,7 +105,7 @@ async fn upload_multipart(file_upload: &FileUpload, client: &Client, chunk_size:
     let multipart_upload_res: CreateMultipartUploadOutput = client
         .create_multipart_upload()
         .bucket(bucket_name)
-        .key(file_path)
+        .key(file_path.clone())
         .send()
         .await
         .unwrap();
@@ -136,7 +137,7 @@ async fn upload_multipart(file_upload: &FileUpload, client: &Client, chunk_size:
         };
 
         let stream = ByteStream::read_from()
-            .path(file_path)
+            .path(file_path.clone())
             .offset(chunk_index * chunk_size)
             .length(Length::Exact(this_chunk))
             .buffer_size(buffer_size)
@@ -152,7 +153,7 @@ async fn upload_multipart(file_upload: &FileUpload, client: &Client, chunk_size:
         // snippet-start:[rust.example_code.s3.upload_part]
         let upload_part_res = client
             .upload_part()
-            .key(file_path)
+            .key(file_path.clone())
             .bucket(bucket_name)
             .upload_id(upload_id)
             .body(stream)
@@ -175,7 +176,7 @@ async fn upload_multipart(file_upload: &FileUpload, client: &Client, chunk_size:
     let _complete_multipart_upload_res = client
         .complete_multipart_upload()
         .bucket(bucket_name)
-        .key(file_path)
+        .key(file_path.clone())
         .multipart_upload(completed_multipart_upload)
         .upload_id(upload_id)
         .send()
