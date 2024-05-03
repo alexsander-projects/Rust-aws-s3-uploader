@@ -4,6 +4,8 @@ use std::time::Duration;
 use clap::Parser;
 use itertools::Itertools;
 use walkdir::WalkDir;
+use tokio;
+use tokio::fs::File;
 
 use aws_config::timeout::TimeoutConfig;
 use aws_sdk_s3::operation::create_multipart_upload::CreateMultipartUploadOutput;
