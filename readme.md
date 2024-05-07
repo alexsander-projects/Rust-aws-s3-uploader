@@ -40,8 +40,7 @@ It loads the credentials with `aws_config::from_env()`
 
 - We may pass `buffer_size`, `chunk_size`, `bucket_name` and `threads` on the command that we will use to run the app
     
-    
-    ./s3_uploader.exe --bucket-name <bucket name> --dir-path <path-to-your-folder> --threads <number-of-threads> --chunk-size <chunk_size> --buffer-size <buffer_size>
+        ./s3_uploader.exe --bucket-name <bucket name> --dir-path <path-to-your-folder> --threads <number-of-threads> --chunk-size <chunk_size> --buffer-size <buffer_size>
 
 - Buffer size:
 
