@@ -1,4 +1,4 @@
-# Rust-s3-uploader
+# Rust-aws-s3-uploader
 
 ### Blazingly fast s3 uploader in Rust
 
@@ -6,6 +6,8 @@
 - The app has incredible performance, being able to use less than 500MB of RAM (depending on the buffer size parameter)
 and consumes an average of 10% of CPU (on a `r5.xlarge` on EC2, this one has an Intel Xeon 8175 Cpu, 4VCpus)
 - It works by spawning tasks with `tokio::spawn`, inside the loop it reads the file, uploads it, and `unwrap()`
+
+## Here's the loop part of the code:
 
 ```doctestinjectablerust
 let mut threads = vec![];
@@ -51,6 +53,15 @@ reduction in CPU usage, at the cost of memory increase.
 uploaded; A 1GB file would require 205 calls for the 205 chunks if using the current default of 5MB and so on...
 
 As per documentation, here are the limits: [Amazon S3 multipart upload limits](https://docs.aws.amazon.com/AmazonS3/latest/userguide/qfacts.html)
+
+- Bucket name:
+
+    >The aws s3 bucket name. 
+
+- Dir path:
+
+    >The path to your folder/directory, when uploaded, folders will be created on s3 according to the path, for example: 
+"C:/dir/data" will create the folders "dir" and "data" and put the files on those folders accordingly.
 
 - Threads:
 
