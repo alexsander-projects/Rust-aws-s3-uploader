@@ -52,3 +52,8 @@ uploaded; A 1GB file would require 205 calls for the 205 chunks if using the cur
 
 As per documentation, here are the limits: [Amazon S3 multipart upload limits](https://docs.aws.amazon.com/AmazonS3/latest/userguide/qfacts.html)
 
+- Threads:
+
+    >By documentation: https://v0-1--tokio.netlify.app/docs/futures/spawning/, spawn one thread per cpu core. These tasks will
+be managed by the runtime, `tokio` is able to spawn many tasks per thread, improving a lot of performance, this is extremely
+useful in our use case, since a lot of calls can be made.
