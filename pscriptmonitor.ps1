@@ -91,18 +91,31 @@ while ($true)
 
         # Network Usage
         $networkAdapters = Get-NetAdapter | Where-Object Status -eq "Up"
-        $totalBytesSent = 0
+        $totalBytesSentStart = 0
         foreach ($adapter in $networkAdapters)
         {
             $statistics = Get-NetAdapterStatistics -Name $adapter.Name
-            $totalBytesSent += $statistics.SentBytes
+            $totalBytesSentStart += $statistics.SentBytes
         }
 
-        # Calculate bytes sent during the time interval and convert to Mbps
-        $bytesSent = $totalBytesSent - $prevTotalBytesSent
-        $megabitsSent = [Math]::Round(($bytesSent * 8) / 1GB, 2)
+        # Wait for a specific period of time (e.g., 1 second)
+        Start-Sleep -Seconds 1
 
-        Write-Host "NetworkOut: $megabitsSent Mbps" -NoNewline
+        # Calculate bytes sent again
+        $totalBytesSentEnd = 0
+        foreach ($adapter in $networkAdapters)
+        {
+            $statistics = Get-NetAdapterStatistics -Name $adapter.Name
+            $totalBytesSentEnd += $statistics.SentBytes
+        }
+
+        # Calculate bytes sent during the time interval
+        $bytesSent = $totalBytesSentEnd - $totalBytesSentStart
+
+        # Convert bytes per second to Megabits per second (1 Byte = 8 bits, 1 Megabit = 10^6 bits)
+        $networkSpeedMbps = ($bytesSent * 8) / 1e6
+
+        Write-Host "NetworkOut: $networkSpeedMbps Mbps" -NoNewline
 
         Write-Host " "
 
