@@ -77,7 +77,6 @@ async fn main() {
         let handle = tokio::spawn(async move {
             for file in file_chunk {
                 println!("Uploading {}", &file.file_path);
-
                 upload_multipart(&file, &client, chunk_size, buffer_size, &s3_path)
                     .await
                     .unwrap();
